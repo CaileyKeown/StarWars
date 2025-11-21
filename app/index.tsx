@@ -23,6 +23,10 @@ import {
   Platform, // tells us if we are on iOS or Android
   FlatList, // shows a scrollable list
   ActivityIndicator, // loading spinner
+  TextInput, // ⭐ NEW (textbox for search)
+  Button, // ⭐ NEW (submit button)
+  Modal, // ⭐ NEW (popup box)
+  Pressable, // ⭐ NEW (close modal button)
 } from 'react-native';
 
 // navigation tools
@@ -71,6 +75,10 @@ function PlanetsScreen() { // planets screen component
   const [planets, setPlanets] = useState([]); // store list of planets
   const [loading, setLoading] = useState(true); // loading circle thingy
 
+  // ⭐ NEW state for search + modal
+  const [searchText, setSearchText] = useState(""); // textbox value
+  const [modalVisible, setModalVisible] = useState(false); // opens modal
+
   // when user opens the screen, that's when useEffect runs and then fetches the planet list
   useEffect(() => {
     async function loadPlanets() { // async function to fetch planets
@@ -89,39 +97,66 @@ function PlanetsScreen() { // planets screen component
   }, []);
 
   return (
-    <SimpleList
-      title="Star Wars - Planets"
-      data={planets}
-      loading={loading}
-      renderItem={({ item }) => ( // tells the list how to display each item
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{item.name}</Text> 
+    <View style={{ flex: 1 }}>
+      
+      {/* ⭐ SEARCH TEXTBOX + BUTTON */}
+      <TextInput
+        style={styles.inputBox}
+        placeholder="Search planets..."
+        placeholderTextColor="gray"
+        value={searchText}
+        onChangeText={setSearchText}
+      />
+      <Button title="Search" onPress={() => setModalVisible(true)} />
+
+      <SimpleList
+        title="Star Wars - Planets"
+        data={planets}
+        loading={loading}
+        renderItem={({ item }) => ( // tells the list how to display each item
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{item.name}</Text> 
+          </View>
+        )}
+      />
+
+        //
+
+      {/* ⭐ NEW MODAL POPUP */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalView}>
+            <Text style={styles.modalText}>You typed: {searchText}</Text>
+            <Pressable
+              style={styles.closeButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </Pressable>
+          </View>
         </View>
-      )}
-    />
+      </Modal>
+    </View>
   );
 }
-
-/* Summary for my own clarity!!
-When the Planets screen loads:
-- useEffect runs the loadPlanets function
-- loadPlanets fetches data from SWAPI
-- The response is converted to JSON
-- The planets array is stored in state
-- loading is set to false
-- The SimpleList component displays the list of planets
-*/
-
 
 
 /* ⭐FILMS SCREEN
     -displays each film title and episode number
     -scrollable list
 */
-
 function FilmsScreen() {
   const [films, setFilms] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // ⭐ NEW
+  const [searchText, setSearchText] = useState("");
+  const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     async function loadFilms() {
@@ -140,19 +175,55 @@ function FilmsScreen() {
   }, []);
 
   return (
-    <SimpleList
-      title="Star Wars - Films"
-      data={films}
-      loading={loading}
-      renderItem={({ item }) => (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{item.title}</Text>
-          <Text style={styles.cardLine}>Episode: {item.episode_id}</Text>
+    <View style={{ flex: 1 }}>
+      <TextInput
+        style={styles.inputBox}
+        placeholder="Search films..."
+        placeholderTextColor="gray"
+        value={searchText}
+        onChangeText={setSearchText}
+      />
+      <Button title="Search" onPress={() => setModalVisible(true)} />
+
+      <SimpleList
+        title="Star Wars - Films"
+        data={films}
+        loading={loading}
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{item.title}</Text>
+            <Text style={styles.cardLine}>Episode: {item.episode_id}</Text>
+          </View>
+        )}
+      />
+
+// Modal is a type of pop-up windoww inside an app
+// Appears at the top of screen and blocks interaction with the rest of the app until the user closes it
+// will say something like "You typed: Tattoine"
+
+      {/* ⭐ MODAL POPUP */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalView}>
+            <Text style={styles.modalText}>You typed: {searchText}</Text>
+            <Pressable
+              style={styles.closeButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </Pressable>
+          </View>
         </View>
-      )}
-    />
+      </Modal>
+    </View>
   );
 }
+
 
 /* ⭐SPACESHIPS SCREEN
    - SWAPI calls these starships but i'm calling them spaceships
@@ -161,6 +232,10 @@ function FilmsScreen() {
 function SpaceshipsScreen() {
   const [ships, setShips] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // ⭐ NEW
+  const [searchText, setSearchText] = useState("");
+  const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     async function loadShips() {
@@ -179,19 +254,51 @@ function SpaceshipsScreen() {
   }, []);
 
   return (
-    <SimpleList
-      title="Star Wars - Spaceships"
-      data={ships}
-      loading={loading}
-      renderItem={({ item }) => (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{item.name}</Text>
-          <Text style={styles.cardLine}>Model: {item.model}</Text>
+    <View style={{ flex: 1 }}>
+      <TextInput
+        style={styles.inputBox}
+        placeholder="Search spaceships..."
+        placeholderTextColor="gray"
+        value={searchText}
+        onChangeText={setSearchText}
+      />
+      <Button title="Search" onPress={() => setModalVisible(true)} />
+
+      <SimpleList
+        title="Star Wars - Spaceships"
+        data={ships}
+        loading={loading}
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{item.name}</Text>
+            <Text style={styles.cardLine}>Model: {item.model}</Text>
+          </View>
+        )}
+      />
+
+      {/* ⭐ MODAL POPUP */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalView}>
+            <Text style={styles.modalText}>You typed: {searchText}</Text>
+            <Pressable
+              style={styles.closeButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </Pressable>
+          </View>
         </View>
-      )}
-    />
+      </Modal>
+    </View>
   );
 }
+
 
 /*
   Bottom tabs (for iOS):
@@ -246,13 +353,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'yellow', // title color
     marginBottom: 12,
+    textAlign: 'center',
   },
   card: {
     backgroundColor: '#111',
     borderRadius: 8,
     padding: 12,
     marginBottom: 10,
-    width: 300,
+    width: '100%',
   },
   cardTitle: {
     color: 'yellow',
@@ -264,4 +372,48 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
   },
+
+  // ⭐ SEARCH FIELD STYLE
+  inputBox: {
+    backgroundColor: '#222',
+    borderColor: 'yellow',
+    borderWidth: 1,
+    padding: 8,
+    marginBottom: 10,
+    color: 'white',
+    marginHorizontal: 10,
+    borderRadius: 5,
+  },
+
+  // ⭐ NEW MODAL STYLES
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalView: {
+    backgroundColor: 'black',
+    borderRadius: 10,
+    padding: 20,
+    alignItems: 'center',
+    borderColor: 'yellow',
+    borderWidth: 2,
+  },
+  modalText: {
+    color: 'yellow',
+    fontSize: 18,
+    marginBottom: 10,
+  },
+  closeButton: {
+    backgroundColor: 'yellow',
+    padding: 10,
+    borderRadius: 5,
+  },
+  closeButtonText: {
+    color: 'black',
+    fontWeight: 'bold',
+  },
 });
+
+// Reminder: To start the app, run "expo start" in the terminal
