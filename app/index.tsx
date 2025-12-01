@@ -11,139 +11,127 @@
 import 'react-native-gesture-handler';
 
 // React basics + state + side effects
-// useState lets us store API data
-// useEffect lets us run code when the screen first loads
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-// UI tools from React Native
+// UI tools
 import {
   View,
   Text,
   StyleSheet,
-  Platform, // tells us if we are on iOS or Android
-  ActivityIndicator, // loading spinner
-  TextInput, // ⭐ NEW (textbox for search)
-  Button, // ⭐ NEW (submit button)
-  Modal, // ⭐ NEW (popup box)
-  Pressable, // ⭐ NEW (close modal button)
-  ScrollView, // ⭐ NEW (scrollable screen area)
-  Animated, // ⭐ NEW (animations)
+  Platform,
+  ActivityIndicator,
+  TextInput,
+  Button,
+  Modal,
+  Pressable,
+  ScrollView,
+  Image,
+  Animated,   // ⭐ for animation
 } from 'react-native';
 
-// ⭐ NEW for swipe functionality
-import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
+// ⭐ SWIPEABLE
+import { Swipeable } from 'react-native-gesture-handler';
 
-// navigation tools
+// NAVIGATION
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 
-// side darwer menu
+// ⭐ IMAGES FOR EACH SCREEN
+import FilmsImage from '../assets/films.png';
+import PlanetsImage from '../assets/planets.png';
+import SpaceshipsImage from '../assets/spaceships.png';
 
-// Create navigator objects: one for bottom tabs (iOS) and one for drawer menu (Android)
+
 const Tab = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
 
 
-// ⭐ NEW ANIMATED CARD COMPONENT
-function AnimatedCard({ children }) {
-  const slideAnim = new Animated.Value(30); // start slightly to the right
-  const fadeAnim = new Animated.Value(0);   // start invisible
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  return (
-    <Animated.View
-      style={{
-        opacity: fadeAnim,
-        transform: [{ translateX: slideAnim }],
-      }}
-    >
-      {children}
-    </Animated.View>
-  );
-}
-
-
-// ⭐ UPDATED SimpleList to include ScrollView + Swipeable + Animation
+// ⭐ SIMPLE LIST WITH SWIPE + ANIMATION
 function SimpleList({ title, data, loading, renderItem }) {
   return (
     <ScrollView style={{ flex: 1 }}>
       <View style={styles.screenContainer}>
         <Text style={styles.titleText}>{title}</Text>
 
-        {/* If loading and no data yet, show spinner */}
         {loading && data.length === 0 ? (
           <ActivityIndicator size="large" color="yellow" />
         ) : null}
 
-        {/* ⭐ Each item is Swipeable AND animated */}
-        {data.map((item, index) => (
-          <Swipeable
-            key={index}
-            onSwipeableOpen={() => alert(`You swiped: ${item.name || item.title}`)}
-          >
-            <AnimatedCard>
-              {renderItem({ item })}
-            </AnimatedCard>
-          </Swipeable>
-        ))}
+        {data.map((item, index) => {
+          // ⭐ animation setup
+          const fadeAnim = useRef(new Animated.Value(0)).current;
+          const slideAnim = useRef(new Animated.Value(20)).current;
+
+          useEffect(() => {
+            Animated.parallel([
+              Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 250,
+                useNativeDriver: true,
+              }),
+              Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 250,
+                useNativeDriver: true,
+              }),
+            ]).start();
+          }, []);
+
+          return (
+            <Swipeable
+              key={index}
+              onSwipeableOpen={() =>
+                alert(`You swiped: ${item.name || item.title}`)
+              }
+            >
+              <Animated.View
+                style={{
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }],
+                }}
+              >
+                {renderItem({ item })}
+              </Animated.View>
+            </Swipeable>
+          );
+        })}
       </View>
     </ScrollView>
   );
 }
 
+/* ⭐ PLANETS SCREEN */
+function PlanetsScreen() {
+  const [planets, setPlanets] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-
-/*
-  Comonents for each screen: (Planets, Films, Spaceships).
-*/
-
-/* ⭐PLANETS SCREEN
-   - show loading circle
-   - call the API
-   - save the planets in planets state variable
-   - stop the loading circle
-   - display the list of planets
-*/
-function PlanetsScreen() { // planets screen component
-  const [planets, setPlanets] = useState([]); // store list of planets
-  const [loading, setLoading] = useState(true); // loading circle thingy
-
-  // ⭐ NEW state for search + modal
-  const [searchText, setSearchText] = useState(""); // textbox value
-  const [modalVisible, setModalVisible] = useState(false); // opens modal
+  const [searchText, setSearchText] = useState("");
+  const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
-    async function loadPlanets() { // async function to fetch planets
+    async function loadPlanets() {
       try {
-        const response = await fetch('https://swapi.dev/api/planets/'); // "Go to Star Wars API and get the planets page"
-        const data = await response.json(); // Converts the response into JSON format
-        setPlanets(data.results); // data.results is the array of planets; i'm storing it in the state varaibles "planets"
+        const response = await fetch('https://swapi.dev/api/planets/');
+        const data = await response.json();
+        setPlanets(data.results);
       } catch (error) {
-        console.log('Error loading planets:', error); // just incase there's a network error or something
+        console.log('Error loading planets:', error);
       } finally {
-        setLoading(false); // turning off the loading circle thingy 
+        setLoading(false);
       }
     }
-    loadPlanets(); // now i'm actually executing the function to load the planets
+    loadPlanets();
   }, []);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      {/* ⭐ SEARCH TEXTBOX + BUTTON */}
+    <View style={{ flex: 1 }}>
+
+      {/* ⭐ HEADER IMAGE */}
+      <Image
+        source={PlanetsImage}
+        style={{ width: '100%', height: 180, resizeMode: 'cover' }}
+      />
+
       <TextInput
         style={styles.inputBox}
         placeholder="Search planets..."
@@ -164,7 +152,7 @@ function PlanetsScreen() { // planets screen component
         )}
       />
 
-      {/* ⭐ NEW MODAL POPUP */}
+      {/* modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -183,17 +171,15 @@ function PlanetsScreen() { // planets screen component
           </View>
         </View>
       </Modal>
-    </GestureHandlerRootView>
+    </View>
   );
 }
 
-
-/* ⭐FILMS SCREEN */
+/* ⭐ FILMS SCREEN */
 function FilmsScreen() {
   const [films, setFilms] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ⭐ NEW
   const [searchText, setSearchText] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -213,7 +199,14 @@ function FilmsScreen() {
   }, []);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <View style={{ flex: 1 }}>
+
+      {/* ⭐ HEADER IMAGE */}
+      <Image
+        source={FilmsImage}
+        style={{ width: '100%', height: 180, resizeMode: 'cover' }}
+      />
+
       <TextInput
         style={styles.inputBox}
         placeholder="Search films..."
@@ -235,7 +228,7 @@ function FilmsScreen() {
         )}
       />
 
-      {/* ⭐ MODAL POPUP */}
+      {/* modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -254,17 +247,15 @@ function FilmsScreen() {
           </View>
         </View>
       </Modal>
-    </GestureHandlerRootView>
+    </View>
   );
 }
 
-
-/* ⭐SPACESHIPS SCREEN */
+/* ⭐ SPACESHIPS SCREEN */
 function SpaceshipsScreen() {
   const [ships, setShips] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ⭐ NEW
   const [searchText, setSearchText] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -284,7 +275,14 @@ function SpaceshipsScreen() {
   }, []);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <View style={{ flex: 1 }}>
+
+      {/* ⭐ HEADER IMAGE */}
+      <Image
+        source={SpaceshipsImage}
+        style={{ width: '100%', height: 180, resizeMode: 'cover' }}
+      />
+
       <TextInput
         style={styles.inputBox}
         placeholder="Search spaceships..."
@@ -306,7 +304,7 @@ function SpaceshipsScreen() {
         )}
       />
 
-      {/* ⭐ MODAL POPUP */}
+      {/* modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -325,16 +323,12 @@ function SpaceshipsScreen() {
           </View>
         </View>
       </Modal>
-    </GestureHandlerRootView>
+    </View>
   );
 }
 
 
-/*
-  Bottom tabs (for iOS):
-  Shows Planets / Films / Spaceships at the bottom of the screen.
-  makes a tab button called "Planets", "Films", "Spaceships", and when tapped, shows the component for that screen.
-*/
+// ⭐ BOTTOM TABS (iOS)
 function TabsNavigator() {
   return (
     <Tab.Navigator>
@@ -345,10 +339,7 @@ function TabsNavigator() {
   );
 }
 
-/*
-  Drawer (for Android/web):
-  Sets up drawer navigation; the menu slides in from the left and lets the user open any of the 3 screens
-*/
+// ⭐ DRAWER NAV (Android/Web)
 function DrawerNavigator() {
   return (
     <Drawer.Navigator>
@@ -359,30 +350,23 @@ function DrawerNavigator() {
   );
 }
 
-// App() is the root component. It checks the platform and loads TabsNavigator for iOS or DrawerNavigator for Android/web.
-
 export default function App() {
   return Platform.OS === 'ios' ? <TabsNavigator /> : <DrawerNavigator />;
 }
 
 
-/*   STYLES
-   - Screen layout
-   - List styling
-   - Card styling
-   - Colors matching Star Wars theme, so yellow and black stuffs
-*/
+// ⭐ STYLES (your original ones kept)
 const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
     paddingTop: 12,
     alignItems: 'stretch',
-    backgroundColor: 'black', // background color
+    backgroundColor: 'black',
   },
   titleText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'yellow', // title color
+    color: 'yellow',
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -403,8 +387,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
   },
-
-  // ⭐ SEARCH FIELD STYLE
   inputBox: {
     backgroundColor: '#222',
     borderColor: 'yellow',
@@ -415,8 +397,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
     borderRadius: 5,
   },
-
-  // ⭐ NEW MODAL STYLES
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -446,5 +426,3 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-
-// Reminder: To start the app, run "expo start" in the terminal
