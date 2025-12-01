@@ -21,17 +21,17 @@ import {
   Text,
   StyleSheet,
   Platform, // tells us if we are on iOS or Android
-  FlatList, // shows a scrollable list
   ActivityIndicator, // loading spinner
-  TextInput, // ⭐ (textbox for search)
-  Button, // ⭐  (submit button)
-  Modal, // ⭐ (popup box)
-  Pressable, // ⭐ (close modal button)
-  ScrollView, // ⭐ (scrollable screen area)
+  TextInput, // ⭐ NEW (textbox for search)
+  Button, // ⭐ NEW (submit button)
+  Modal, // ⭐ NEW (popup box)
+  Pressable, // ⭐ NEW (close modal button)
+  ScrollView, // ⭐ NEW (scrollable screen area)
+  Animated, // ⭐ NEW (animations)
 } from 'react-native';
 
-// ⭐ for swipe functionality
-import { Swipeable } from 'react-native-gesture-handler';
+// ⭐ NEW for swipe functionality
+import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // navigation tools
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -44,7 +44,40 @@ const Tab = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
 
 
-// ⭐ to include ScrollView + Swipeable
+// ⭐ NEW ANIMATED CARD COMPONENT
+function AnimatedCard({ children }) {
+  const slideAnim = new Animated.Value(30); // start slightly to the right
+  const fadeAnim = new Animated.Value(0);   // start invisible
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={{
+        opacity: fadeAnim,
+        transform: [{ translateX: slideAnim }],
+      }}
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
+
+// ⭐ UPDATED SimpleList to include ScrollView + Swipeable + Animation
 function SimpleList({ title, data, loading, renderItem }) {
   return (
     <ScrollView style={{ flex: 1 }}>
@@ -56,19 +89,23 @@ function SimpleList({ title, data, loading, renderItem }) {
           <ActivityIndicator size="large" color="yellow" />
         ) : null}
 
-        {/* ⭐ Wrap list in Swipeable so any item can be swiped */}
+        {/* ⭐ Each item is Swipeable AND animated */}
         {data.map((item, index) => (
           <Swipeable
             key={index}
-            onSwipeableOpen={() => alert(`You swiped: ${item.name || item.title}`)} // ⭐ NEW ACTION
+            onSwipeableOpen={() => alert(`You swiped: ${item.name || item.title}`)}
           >
-            {renderItem({ item })}
+            <AnimatedCard>
+              {renderItem({ item })}
+            </AnimatedCard>
           </Swipeable>
         ))}
       </View>
     </ScrollView>
   );
 }
+
+
 
 /*
   Comonents for each screen: (Planets, Films, Spaceships).
@@ -105,7 +142,7 @@ function PlanetsScreen() { // planets screen component
   }, []);
 
   return (
-    <View style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       {/* ⭐ SEARCH TEXTBOX + BUTTON */}
       <TextInput
         style={styles.inputBox}
@@ -146,7 +183,7 @@ function PlanetsScreen() { // planets screen component
           </View>
         </View>
       </Modal>
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -176,7 +213,7 @@ function FilmsScreen() {
   }, []);
 
   return (
-    <View style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <TextInput
         style={styles.inputBox}
         placeholder="Search films..."
@@ -217,7 +254,7 @@ function FilmsScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -247,7 +284,7 @@ function SpaceshipsScreen() {
   }, []);
 
   return (
-    <View style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <TextInput
         style={styles.inputBox}
         placeholder="Search spaceships..."
@@ -288,7 +325,7 @@ function SpaceshipsScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
