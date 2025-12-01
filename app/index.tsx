@@ -23,11 +23,15 @@ import {
   Platform, // tells us if we are on iOS or Android
   FlatList, // shows a scrollable list
   ActivityIndicator, // loading spinner
-  TextInput, // ⭐ NEW (textbox for search)
-  Button, // ⭐ NEW (submit button)
-  Modal, // ⭐ NEW (popup box)
-  Pressable, // ⭐ NEW (close modal button)
+  TextInput, // ⭐ (textbox for search)
+  Button, // ⭐  (submit button)
+  Modal, // ⭐ (popup box)
+  Pressable, // ⭐ (close modal button)
+  ScrollView, // ⭐ (scrollable screen area)
 } from 'react-native';
+
+// ⭐ for swipe functionality
+import { Swipeable } from 'react-native-gesture-handler';
 
 // navigation tools
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -40,23 +44,29 @@ const Tab = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
 
 
+// ⭐ to include ScrollView + Swipeable
 function SimpleList({ title, data, loading, renderItem }) {
   return (
-    <View style={styles.screenContainer}>
-      <Text style={styles.titleText}>{title}</Text>
+    <ScrollView style={{ flex: 1 }}>
+      <View style={styles.screenContainer}>
+        <Text style={styles.titleText}>{title}</Text>
 
-      {/* If loading and no data yet, show spinner */}
-      {loading && data.length === 0 ? (
-        <ActivityIndicator size="large" color="yellow" />
-      ) : null}
+        {/* If loading and no data yet, show spinner */}
+        {loading && data.length === 0 ? (
+          <ActivityIndicator size="large" color="yellow" />
+        ) : null}
 
-      {/* Show list of items */}
-      <FlatList
-        data={data}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={renderItem}
-      />
-    </View>
+        {/* ⭐ Wrap list in Swipeable so any item can be swiped */}
+        {data.map((item, index) => (
+          <Swipeable
+            key={index}
+            onSwipeableOpen={() => alert(`You swiped: ${item.name || item.title}`)} // ⭐ NEW ACTION
+          >
+            {renderItem({ item })}
+          </Swipeable>
+        ))}
+      </View>
+    </ScrollView>
   );
 }
 
@@ -79,7 +89,6 @@ function PlanetsScreen() { // planets screen component
   const [searchText, setSearchText] = useState(""); // textbox value
   const [modalVisible, setModalVisible] = useState(false); // opens modal
 
-  // when user opens the screen, that's when useEffect runs and then fetches the planet list
   useEffect(() => {
     async function loadPlanets() { // async function to fetch planets
       try {
@@ -92,13 +101,11 @@ function PlanetsScreen() { // planets screen component
         setLoading(false); // turning off the loading circle thingy 
       }
     }
-
     loadPlanets(); // now i'm actually executing the function to load the planets
   }, []);
 
   return (
     <View style={{ flex: 1 }}>
-      
       {/* ⭐ SEARCH TEXTBOX + BUTTON */}
       <TextInput
         style={styles.inputBox}
@@ -113,14 +120,12 @@ function PlanetsScreen() { // planets screen component
         title="Star Wars - Planets"
         data={planets}
         loading={loading}
-        renderItem={({ item }) => ( // tells the list how to display each item
+        renderItem={({ item }) => (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>{item.name}</Text> 
+            <Text style={styles.cardTitle}>{item.name}</Text>
           </View>
         )}
       />
-
-        //
 
       {/* ⭐ NEW MODAL POPUP */}
       <Modal
@@ -146,10 +151,7 @@ function PlanetsScreen() { // planets screen component
 }
 
 
-/* ⭐FILMS SCREEN
-    -displays each film title and episode number
-    -scrollable list
-*/
+/* ⭐FILMS SCREEN */
 function FilmsScreen() {
   const [films, setFilms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -170,7 +172,6 @@ function FilmsScreen() {
         setLoading(false);
       }
     }
-
     loadFilms();
   }, []);
 
@@ -197,10 +198,6 @@ function FilmsScreen() {
         )}
       />
 
-// Modal is a type of pop-up windoww inside an app
-// Appears at the top of screen and blocks interaction with the rest of the app until the user closes it
-// will say something like "You typed: Tattoine"
-
       {/* ⭐ MODAL POPUP */}
       <Modal
         animationType="slide"
@@ -225,10 +222,7 @@ function FilmsScreen() {
 }
 
 
-/* ⭐SPACESHIPS SCREEN
-   - SWAPI calls these starships but i'm calling them spaceships
-   - Shows each ship name
-*/
+/* ⭐SPACESHIPS SCREEN */
 function SpaceshipsScreen() {
   const [ships, setShips] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -249,7 +243,6 @@ function SpaceshipsScreen() {
         setLoading(false);
       }
     }
-
     loadShips();
   }, []);
 
@@ -334,6 +327,7 @@ function DrawerNavigator() {
 export default function App() {
   return Platform.OS === 'ios' ? <TabsNavigator /> : <DrawerNavigator />;
 }
+
 
 /*   STYLES
    - Screen layout
