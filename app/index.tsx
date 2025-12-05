@@ -7,13 +7,10 @@
 // New Expo projects use the Expo router, which starts from app/index.tsx
 // app.js would be used in older projects without the router
 
-// sets up gesture handling for the app (touch & swipe), and drawer menus
 import 'react-native-gesture-handler';
 
-// React basics + state + side effects
 import React, { useState, useEffect, useRef } from 'react';
 
-// UI tools
 import {
   View,
   Text,
@@ -26,87 +23,88 @@ import {
   Pressable,
   ScrollView,
   Image,
-  Animated,   // ⭐ for animation
+  Animated,
 } from 'react-native';
 
-// ⭐ SWIPEABLE
-import { Swipeable } from 'react-native-gesture-handler';
+import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
 
-// NAVIGATION
+// ⭐ NEW — network status
+import * as Network from 'expo-network';
+
+// navigation
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
-
-// ⭐ IMAGES FOR EACH SCREEN
-import FilmsImage from '../assets/films.png';
-import PlanetsImage from '../assets/planets.png';
-import SpaceshipsImage from '../assets/spaceships.png';
-
 
 const Tab = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
 
-
-// ⭐ SIMPLE LIST WITH SWIPE + ANIMATION
+/*  
+  SIMPLE LIST — now includes:
+  ✔ ScrollView
+  ✔ Swipeable items
+  ✔ Animated slide-in cards
+*/
 function SimpleList({ title, data, loading, renderItem }) {
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
+  useEffect(() => {
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 400,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
   return (
     <ScrollView style={{ flex: 1 }}>
-      <View style={styles.screenContainer}>
+      <Animated.View
+        style={[
+          styles.screenContainer,
+          { transform: [{ translateY: slideAnim }] },
+        ]}
+      >
         <Text style={styles.titleText}>{title}</Text>
 
         {loading && data.length === 0 ? (
           <ActivityIndicator size="large" color="yellow" />
         ) : null}
 
-        {data.map((item, index) => {
-          // ⭐ animation setup
-          const fadeAnim = useRef(new Animated.Value(0)).current;
-          const slideAnim = useRef(new Animated.Value(20)).current;
-
-          useEffect(() => {
-            Animated.parallel([
-              Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 250,
-                useNativeDriver: true,
-              }),
-              Animated.timing(slideAnim, {
-                toValue: 0,
-                duration: 250,
-                useNativeDriver: true,
-              }),
-            ]).start();
-          }, []);
-
-          return (
-            <Swipeable
-              key={index}
-              onSwipeableOpen={() =>
-                alert(`You swiped: ${item.name || item.title}`)
-              }
-            >
-              <Animated.View
-                style={{
-                  opacity: fadeAnim,
-                  transform: [{ translateY: slideAnim }],
-                }}
-              >
-                {renderItem({ item })}
-              </Animated.View>
-            </Swipeable>
-          );
-        })}
-      </View>
+        {data.map((item, index) => (
+          <Swipeable
+            key={index}
+            onSwipeableOpen={() =>
+              alert(`You swiped: ${item.name || item.title}`)
+            }
+          >
+            {renderItem({ item })}
+          </Swipeable>
+        ))}
+      </Animated.View>
     </ScrollView>
   );
 }
 
-/* ⭐ PLANETS SCREEN */
+/* -----------------------------------------
+   PLANETS SCREEN
+----------------------------------------- */
 function PlanetsScreen() {
   const [planets, setPlanets] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [searchText, setSearchText] = useState("");
+  // search + modal
+  const [searchText, setSearchText] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
+
+  // ⭐ NEW — network state
+  const [networkOK, setNetworkOK] = useState(true);
+
+  useEffect(() => {
+    async function checkNetwork() {
+      const state = await Network.getNetworkStateAsync();
+      setNetworkOK(state.isConnected && state.isInternetReachable);
+    }
+    checkNetwork();
+  }, []);
 
   useEffect(() => {
     async function loadPlanets() {
@@ -115,7 +113,7 @@ function PlanetsScreen() {
         const data = await response.json();
         setPlanets(data.results);
       } catch (error) {
-        console.log('Error loading planets:', error);
+        setNetworkOK(false);
       } finally {
         setLoading(false);
       }
@@ -123,65 +121,88 @@ function PlanetsScreen() {
     loadPlanets();
   }, []);
 
+  if (!networkOK) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>
+          No network connection. Please check your internet.
+        </Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={{ flex: 1 }}>
+        {/* ⭐ IMAGE AT TOP OF SCREEN */}
+        <Image
+          source={require('../assets/planets.png')}
+          style={styles.headerImage}
+        />
 
-      {/* ⭐ HEADER IMAGE */}
-      <Image
-        source={PlanetsImage}
-        style={{ width: '100%', height: 180, resizeMode: 'cover' }}
-      />
 
-      <TextInput
-        style={styles.inputBox}
-        placeholder="Search planets..."
-        placeholderTextColor="gray"
-        value={searchText}
-        onChangeText={setSearchText}
-      />
-      <Button title="Search" onPress={() => setModalVisible(true)} />
+        <TextInput
+          style={styles.inputBox}
+          placeholder="Search planets..."
+          placeholderTextColor="gray"
+          value={searchText}
+          onChangeText={setSearchText}
+        />
+        <Button title="Search" onPress={() => setModalVisible(true)} />
 
-      <SimpleList
-        title="Star Wars - Planets"
-        data={planets}
-        loading={loading}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{item.name}</Text>
+        <SimpleList
+          title="Star Wars - Planets"
+          data={planets}
+          loading={loading}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>{item.name}</Text>
+            </View>
+          )}
+        />
+
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalView}>
+              <Text style={styles.modalText}>You typed: {searchText}</Text>
+              <Pressable
+                style={styles.closeButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.closeButtonText}>Close</Text>
+              </Pressable>
+            </View>
           </View>
-        )}
-      />
-
-      {/* modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalView}>
-            <Text style={styles.modalText}>You typed: {searchText}</Text>
-            <Pressable
-              style={styles.closeButton}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.closeButtonText}>Close</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+    </GestureHandlerRootView>
   );
 }
 
-/* ⭐ FILMS SCREEN */
+/* -----------------------------------------
+   FILMS SCREEN
+----------------------------------------- */
 function FilmsScreen() {
   const [films, setFilms] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
+
+  const [networkOK, setNetworkOK] = useState(true);
+
+  useEffect(() => {
+    async function checkNetwork() {
+      const state = await Network.getNetworkStateAsync();
+      setNetworkOK(state.isConnected && state.isInternetReachable);
+    }
+    checkNetwork();
+  }, []);
 
   useEffect(() => {
     async function loadFilms() {
@@ -189,8 +210,8 @@ function FilmsScreen() {
         const response = await fetch('https://swapi.dev/api/films/');
         const data = await response.json();
         setFilms(data.results);
-      } catch (error) {
-        console.log('Error loading films:', error);
+      } catch {
+        setNetworkOK(false);
       } finally {
         setLoading(false);
       }
@@ -198,66 +219,88 @@ function FilmsScreen() {
     loadFilms();
   }, []);
 
+  if (!networkOK) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>
+          No network connection. Please check your internet.
+        </Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={{ flex: 1 }}>
+        <Image
+          source={require('../assets/films.png')}
+          style={styles.headerImage}
+        />
 
-      {/* ⭐ HEADER IMAGE */}
-      <Image
-        source={FilmsImage}
-        style={{ width: '100%', height: 180, resizeMode: 'cover' }}
-      />
 
-      <TextInput
-        style={styles.inputBox}
-        placeholder="Search films..."
-        placeholderTextColor="gray"
-        value={searchText}
-        onChangeText={setSearchText}
-      />
-      <Button title="Search" onPress={() => setModalVisible(true)} />
+        <TextInput
+          style={styles.inputBox}
+          placeholder="Search films..."
+          placeholderTextColor="gray"
+          value={searchText}
+          onChangeText={setSearchText}
+        />
+        <Button title="Search" onPress={() => setModalVisible(true)} />
 
-      <SimpleList
-        title="Star Wars - Films"
-        data={films}
-        loading={loading}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <Text style={styles.cardLine}>Episode: {item.episode_id}</Text>
+        <SimpleList
+          title="Star Wars - Films"
+          data={films}
+          loading={loading}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>{item.title}</Text>
+              <Text style={styles.cardLine}>Episode: {item.episode_id}</Text>
+            </View>
+          )}
+        />
+
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalView}>
+              <Text style={styles.modalText}>You typed: {searchText}</Text>
+              <Pressable
+                style={styles.closeButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.closeButtonText}>Close</Text>
+              </Pressable>
+            </View>
           </View>
-        )}
-      />
-
-      {/* modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalView}>
-            <Text style={styles.modalText}>You typed: {searchText}</Text>
-            <Pressable
-              style={styles.closeButton}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.closeButtonText}>Close</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+    </GestureHandlerRootView>
   );
 }
 
-/* ⭐ SPACESHIPS SCREEN */
+/* -----------------------------------------
+   SPACESHIPS SCREEN
+----------------------------------------- */
 function SpaceshipsScreen() {
   const [ships, setShips] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
+
+  const [networkOK, setNetworkOK] = useState(true);
+
+  useEffect(() => {
+    async function checkNetwork() {
+      const state = await Network.getNetworkStateAsync();
+      setNetworkOK(state.isConnected && state.isInternetReachable);
+    }
+    checkNetwork();
+  }, []);
 
   useEffect(() => {
     async function loadShips() {
@@ -265,8 +308,8 @@ function SpaceshipsScreen() {
         const response = await fetch('https://swapi.dev/api/starships/');
         const data = await response.json();
         setShips(data.results);
-      } catch (error) {
-        console.log('Error loading starships:', error);
+      } catch {
+        setNetworkOK(false);
       } finally {
         setLoading(false);
       }
@@ -274,61 +317,72 @@ function SpaceshipsScreen() {
     loadShips();
   }, []);
 
+  if (!networkOK) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>
+          No network connection. Please check your internet.
+        </Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={{ flex: 1 }}>
+        <Image
+          source={require('../assets/spaceships.png')}
+          style={styles.headerImage}
+        />
 
-      {/* ⭐ HEADER IMAGE */}
-      <Image
-        source={SpaceshipsImage}
-        style={{ width: '100%', height: 180, resizeMode: 'cover' }}
-      />
 
-      <TextInput
-        style={styles.inputBox}
-        placeholder="Search spaceships..."
-        placeholderTextColor="gray"
-        value={searchText}
-        onChangeText={setSearchText}
-      />
-      <Button title="Search" onPress={() => setModalVisible(true)} />
+        <TextInput
+          style={styles.inputBox}
+          placeholder="Search spaceships..."
+          placeholderTextColor="gray"
+          value={searchText}
+          onChangeText={setSearchText}
+        />
+        <Button title="Search" onPress={() => setModalVisible(true)} />
 
-      <SimpleList
-        title="Star Wars - Spaceships"
-        data={ships}
-        loading={loading}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{item.name}</Text>
-            <Text style={styles.cardLine}>Model: {item.model}</Text>
+        <SimpleList
+          title="Star Wars - Spaceships"
+          data={ships}
+          loading={loading}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>{item.name}</Text>
+              <Text style={styles.cardLine}>Model: {item.model}</Text>
+            </View>
+          )}
+        />
+
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalView}>
+              <Text style={styles.modalText}>You typed: {searchText}</Text>
+              <Pressable
+                style={styles.closeButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.closeButtonText}>Close</Text>
+              </Pressable>
+            </View>
           </View>
-        )}
-      />
-
-      {/* modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalView}>
-            <Text style={styles.modalText}>You typed: {searchText}</Text>
-            <Pressable
-              style={styles.closeButton}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.closeButtonText}>Close</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+    </GestureHandlerRootView>
   );
 }
 
-
-// ⭐ BOTTOM TABS (iOS)
+/* -----------------------------------------
+   NAVIGATION
+----------------------------------------- */
 function TabsNavigator() {
   return (
     <Tab.Navigator>
@@ -339,7 +393,6 @@ function TabsNavigator() {
   );
 }
 
-// ⭐ DRAWER NAV (Android/Web)
 function DrawerNavigator() {
   return (
     <Drawer.Navigator>
@@ -354,8 +407,9 @@ export default function App() {
   return Platform.OS === 'ios' ? <TabsNavigator /> : <DrawerNavigator />;
 }
 
-
-// ⭐ STYLES (your original ones kept)
+/* -----------------------------------------
+   STYLES
+----------------------------------------- */
 const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
@@ -369,6 +423,12 @@ const styles = StyleSheet.create({
     color: 'yellow',
     marginBottom: 12,
     textAlign: 'center',
+  },
+  headerImage: {
+    width: '100%',
+    height: 140,
+    resizeMode: 'cover',
+    marginBottom: 8,
   },
   card: {
     backgroundColor: '#111',
@@ -424,5 +484,17 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: 'black',
     fontWeight: 'bold',
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'black',
+    padding: 20,
+  },
+  errorText: {
+    color: 'yellow',
+    fontSize: 20,
+    textAlign: 'center',
   },
 });
