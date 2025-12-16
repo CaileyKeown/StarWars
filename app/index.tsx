@@ -106,7 +106,7 @@ function PlanetsScreen() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('https://swapi.dev/api/planets/');
+        const res = await fetch('https://swapi.py4e.com/api/planets/');
         const data = await res.json();
         setPlanets(data.results);
       } catch {
@@ -177,7 +177,7 @@ function FilmsScreen() {
   const [searchText, setSearchText] = useState('');
 
   useEffect(() => {
-    fetch('https://swapi.dev/api/films/')
+    fetch('https://swapi.py4e.com/api/films/')
       .then(res => res.json())
       .then(data => setFilms(data.results));
   }, []);
@@ -218,7 +218,7 @@ function SpaceshipsScreen() {
   const [searchText, setSearchText] = useState('');
 
   useEffect(() => {
-    fetch('https://swapi.dev/api/starships/')
+    fetch('https://swapi.py4e.com/api/starships/')
       .then(res => res.json())
       .then(data => setShips(data.results));
   }, []);
